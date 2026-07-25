@@ -5,7 +5,7 @@ Cohasset (CST), Openshaw (OPS), Carpenter Ridge (CAR), Paradise (PDE), and
 Chico University Farm (CES). Covers WY2016 through the current water year,
 with a historical-average overlay for context.
 
-**Live dashboard:** https://cosmo1007.github.io/butte-precip-dashboard/
+**Live dashboard:** https://agubc-vina.github.io/butte-precip-dashboard/
 
 ## How it stays current
 
@@ -17,7 +17,7 @@ computing cumulative totals.
 A GitHub Actions workflow (`.github/workflows/refresh.yml`) runs the
 refresh automatically every Sunday at 7am Pacific. To trigger an
 on-demand refresh, go to the
-[Actions tab](https://github.com/cosmo1007/butte-precip-dashboard/actions/workflows/refresh.yml)
+[Actions tab](https://github.com/AGUBC-vina/butte-precip-dashboard/actions/workflows/refresh.yml)
 and click "Run workflow."
 
 ## Files

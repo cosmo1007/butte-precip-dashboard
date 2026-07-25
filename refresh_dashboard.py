@@ -48,6 +48,61 @@ STATIONS = {
 }
 START_WY = 2016
 
+# ------- NOAA Atlas 14 precipitation-frequency thresholds -------
+# Point estimates (inches) from the NOAA Precipitation Frequency Data Server,
+# NOAA Atlas 14 Volume 6 Version 2, partial-duration series, retrieved
+# 2026-07-24 for each station's own CDEC coordinates:
+#   https://hdsc.nws.noaa.gov/cgi-bin/new/fe_text_mean.csv
+#       ?lat=<lat>&lon=<lon>&data=depth&units=english&series=pds
+# Keys are window lengths in days; values are depths at each ARI in NOAA_ARI.
+# These are fixed published values — they do not need re-fetching on refresh.
+NOAA_ARI = [1, 2, 5, 10, 25, 50, 100]
+NOAA = {
+    'CST': {1: [3.59, 4.66, 6.01, 7.09, 8.52, 9.6, 10.7],
+            2: [4.93, 6.39, 8.26, 9.75, 11.7, 13.2, 14.7],
+            3: [5.85, 7.56, 9.76, 11.5, 13.9, 15.6, 17.4],
+            4: [6.57, 8.5, 11, 12.9, 15.5, 17.5, 19.4],
+            7: [8.31, 10.7, 13.8, 16.2, 19.3, 21.6, 23.9],
+            10: [9.5, 12.3, 15.7, 18.4, 21.8, 24.4, 26.9],
+            20: [12.7, 16.4, 20.9, 24.3, 28.6, 31.8, 34.8],
+            30: [15.3, 19.7, 25, 29, 34, 37.6, 41]},
+    'OPS': {1: [2.11, 2.76, 3.59, 4.24, 5.08, 5.71, 6.32],
+            2: [2.77, 3.66, 4.78, 5.64, 6.77, 7.6, 8.4],
+            3: [3.22, 4.24, 5.54, 6.54, 7.83, 8.78, 9.7],
+            4: [3.59, 4.71, 6.12, 7.22, 8.65, 9.68, 10.7],
+            7: [4.51, 5.84, 7.51, 8.82, 10.5, 11.8, 13],
+            10: [5.14, 6.59, 8.44, 9.88, 11.8, 13.1, 14.5],
+            20: [6.86, 8.76, 11.1, 13, 15.4, 17.2, 18.9],
+            30: [8.32, 10.6, 13.5, 15.7, 18.5, 20.5, 22.5]},
+    'CAR': {1: [4.65, 5.8, 7.33, 8.58, 10.3, 11.6, 13],
+            2: [6.57, 8.36, 10.7, 12.6, 15.2, 17.2, 19.2],
+            3: [7.9, 10.2, 13.1, 15.5, 18.7, 21.1, 23.6],
+            4: [8.91, 11.5, 14.9, 17.6, 21.2, 24, 26.8],
+            7: [11.6, 15, 19.3, 22.8, 27.5, 31, 34.6],
+            10: [13.2, 17, 21.9, 25.9, 31.1, 35, 38.9],
+            20: [17.3, 22.4, 28.7, 33.7, 40.2, 45, 49.7],
+            30: [20.8, 26.8, 34.3, 40.1, 47.6, 53, 58.2]},
+    'PDE': {1: [3.86, 5, 6.42, 7.53, 8.96, 10, 11],
+            2: [5.05, 6.56, 8.46, 9.96, 11.9, 13.3, 14.8],
+            3: [5.96, 7.73, 9.97, 11.7, 14.1, 15.8, 17.5],
+            4: [6.67, 8.62, 11.1, 13, 15.6, 17.5, 19.5],
+            7: [8.34, 10.6, 13.5, 15.8, 18.8, 21, 23.2],
+            10: [9.68, 12.2, 15.4, 18, 21.3, 23.7, 26.1],
+            20: [13.2, 16.6, 20.8, 24.1, 28.4, 31.5, 34.5],
+            30: [15.8, 20, 25, 28.9, 33.8, 37.3, 40.7]},
+    # CES is monthly manual entry — no storm analysis is possible, but the
+    # thresholds are kept so the panel can explain what it would compare to.
+    'CES': {1: [2.02, 2.82, 3.78, 4.48, 5.35, 5.96, 6.53],
+            2: [2.6, 3.69, 4.99, 5.97, 7.18, 8.04, 8.84],
+            3: [3.01, 4.29, 5.84, 7, 8.45, 9.47, 10.4],
+            4: [3.3, 4.71, 6.41, 7.69, 9.29, 10.4, 11.5],
+            7: [4.07, 5.77, 7.8, 9.32, 11.2, 12.5, 13.8],
+            10: [4.62, 6.5, 8.73, 10.4, 12.4, 13.9, 15.2],
+            20: [6.2, 8.54, 11.3, 13.4, 15.9, 17.7, 19.3],
+            30: [7.66, 10.3, 13.5, 15.9, 18.8, 20.8, 22.7]},
+}
+STORM_DURATIONS = [1, 2, 3, 4, 7, 10, 20, 30]
+
 # ------- Water-year helpers -------
 def current_water_year(today=None):
     """Return the WY number for a given date. Oct–Dec counts toward next WY."""
@@ -176,6 +231,91 @@ def process_accumulated(rows, wy):
             result[i] = round(cur, 2) if seen else 0.0
     return result
 
+def native_cumulative(rows, wy):
+    """Cumulative inches since Oct 1 at the record's own resolution.
+
+    Returns [(datetime, cumulative)], keeping hourly stations hourly so that
+    rolling windows are true n x 24-hour windows rather than calendar days.
+    """
+    start = date(wy - 1, 10, 1)
+    parsed = []
+    for r in rows:
+        try:
+            dt = datetime.strptime(r[0], '%Y%m%d %H%M')
+            parsed.append((dt, float(r[1])))
+        except Exception:
+            continue
+    parsed.sort()
+    if not parsed:
+        return []
+    parsed = clean_spikes(parsed)
+    series = []
+    cumulative = 0.0
+    last_val = parsed[0][1]
+    for dt, v in parsed:
+        if dt.date() < start:
+            last_val = v
+            continue
+        diff = v - last_val
+        if diff < -1.0:
+            pass          # gauge reset — rebaseline without crediting negative
+        elif diff > 0:
+            cumulative += diff
+        last_val = v
+        series.append((dt, cumulative))
+    return series
+
+
+def classify_ari(total, thresholds):
+    """Highest ARI whose threshold this total meets. 0 if below the 1-year."""
+    best = 0
+    for ari, depth in zip(NOAA_ARI, thresholds):
+        if total >= depth:
+            best = ari
+    return best
+
+
+def compute_storms(rows, wy, code, meta):
+    """Largest rolling total at each duration, classified against NOAA Atlas 14.
+
+    Monthly stations are skipped — a month total cannot resolve a storm.
+    """
+    if meta['kind'] != 'accumulated':
+        return None
+    series = native_cumulative(rows, wy)
+    if len(series) < 2:
+        return None
+    lookup = {dt: c for dt, c in series}
+    thresholds = NOAA.get(code)
+    if not thresholds:
+        return None
+    out = []
+    for days in STORM_DURATIONS:
+        span = timedelta(days=days)
+        best = None
+        for dt, c in series:
+            prior = lookup.get(dt - span)
+            if prior is None:
+                continue
+            total = c - prior
+            if best is None or total > best[0]:
+                best = (total, dt)
+        if best is None or best[0] <= 0:
+            continue
+        total, end_dt = best
+        out.append({
+            'days': days,
+            'in': round(total, 2),
+            'start': (end_dt - span).strftime('%Y-%m-%d'),
+            'end': end_dt.strftime('%Y-%m-%d'),
+            'ari': classify_ari(total, thresholds[days]),
+        })
+    if not out:
+        return None
+    return {'resolution': 'hourly' if meta['dur'] == 'H' else 'daily',
+            'rows': out}
+
+
 def process_monthly(rows, wy):
     start = date(wy-1, 10, 1)
     month_totals = {}
@@ -213,6 +353,7 @@ def build_data():
     for code, meta in STATIONS.items():
         print(f'\n{code} ({meta["name"]}):')
         station_data = {'meta': {k: meta[k] for k in ['name','elevation','lat','lon','operator','kind']},
+                        'noaa': NOAA.get(code),
                         'years': {}}
         for wy in water_years:
             rows, source = fetch_or_cache(code, wy, meta)
@@ -230,7 +371,11 @@ def build_data():
                     arr[i] = None
             valid = [v for v in arr if v is not None]
             total = max(valid) if valid else 0.0
-            station_data['years'][str(wy)] = {'cumulative_daily': arr, 'total': round(total, 2)}
+            year_entry = {'cumulative_daily': arr, 'total': round(total, 2)}
+            storms = compute_storms(rows, wy, code, meta)
+            if storms:
+                year_entry['storms'] = storms
+            station_data['years'][str(wy)] = year_entry
             tag = '[cached]' if source == 'cached' else '[fetched]'
             print(f'  WY{wy} {tag}: total={total:.2f}"')
         out['stations'][code] = station_data
