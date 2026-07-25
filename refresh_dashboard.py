@@ -79,17 +79,46 @@ def fetch(station, sensor, dur, start, end):
             continue
     return rows
 
+def cache_is_final(blob, wy, dur):
+    """True if a cached file actually covers the whole water year.
+
+    A cache written mid-year is missing that year's final days. Trusting it
+    the moment the WY rolls over — which is what a bare os.path.exists check
+    does — freezes those missing days in permanently, a few more every year.
+    """
+    if blob.get('final'):
+        return True
+    rows = blob.get('rows') or []
+    if not rows:
+        return False
+    try:
+        last = datetime.strptime(rows[-1][0], '%Y%m%d %H%M').date()
+    except Exception:
+        return False
+    if dur == 'M':
+        return (last.year, last.month) >= (wy, 9)
+    # Accumulated gauges rebaseline in the last days of September, so CDEC
+    # stops returning data a day or two before Sep 30.
+    return last >= date(wy, 9, 28)
+
+
 def fetch_or_cache(code, wy, meta):
-    """Use cached file if the WY is completed. Otherwise fetch fresh."""
+    """Use cached file only if it covers the completed WY. Otherwise fetch."""
     path = os.path.join(CACHE_DIR, f'{code}_{wy}.json')
     if is_completed_wy(wy) and os.path.exists(path):
-        return json.load(open(path))['rows'], 'cached'
-    # Current WY (or missing cache) — fetch from CDEC
+        try:
+            blob = json.load(open(path))
+        except (ValueError, OSError):
+            blob = None
+        if blob and cache_is_final(blob, wy, meta['dur']):
+            return blob['rows'], 'cached'
+    # Current WY, missing cache, or a cache that stopped short of Sep 30
     start = f'{wy-1}-10-01'
     end = min(f'{wy}-09-30', date.today().isoformat())
     rows = fetch(code, meta['sensor'], meta['dur'], start, end)
     with open(path, 'w') as f:
-        json.dump({'rows': rows, 'station': code, 'wy': wy}, f)
+        json.dump({'rows': rows, 'station': code, 'wy': wy,
+                   'final': is_completed_wy(wy)}, f)
     return rows, 'fetched'
 
 # ------- Spike filter + cumulative calc -------
