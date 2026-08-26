@@ -49,3 +49,19 @@ neighbors are dropped before cumulative totals are computed. This catches
 sensor glitches like the 2019-06-02 CAR reading that briefly dipped from
 72.32" to 15.00" and back, which would otherwise inflate the water-year
 total by ~57".
+
+## License
+
+**Code.** The build and refresh scripts, the dashboard HTML/CSS/JS, and any
+GitHub Actions workflows are released under the MIT License. See
+[`LICENSE`](LICENSE).
+
+**Content.** The written analysis, figures, tables, and derived values are
+released by Agricultural Groundwater Users of Butte County (AGUBC) under
+[Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/).
+See [`LICENSE-CONTENT`](LICENSE-CONTENT). Attribute to AGUBC and link back to
+this repository.
+
+**Underlying data.** The third-party datasets named elsewhere in this README are
+not AGUBC's to license. They remain subject to their own terms, and neither
+license above extends to them.
